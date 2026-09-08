@@ -483,15 +483,17 @@ See `docs/deployment.md` for step-by-step instructions.
 
 ## Roadmap
 
-### Project 1 — QuantLab Core (Current)
-- [x] Repository structure
-- [x] Docker + PostgreSQL + Redis
-- [ ] Quant engine (phases 2–11)
-- [ ] Backend API (phases 12–15)
-- [ ] React frontend (phases 16–17)
-- [ ] ML module (phase 18)
-- [ ] AI assistant (phase 19)
-- [ ] Production deployment (phases 22–23)
+### Project 1 — QuantLab Core (Complete)
+- [x] Repository structure & CI pipeline
+- [x] Docker + PostgreSQL + Redis setup
+- [x] Event-driven Quant Engine with zero look-ahead bias
+- [x] Data pipeline (Alpha Vantage + synthetic fallback + validator)
+- [x] 5 Built-in quantitative trading strategies
+- [x] Risk & performance metrics library (CAGR, Sharpe, Sortino, Calmar, Max DD)
+- [x] FastAPI REST API (Auth, Data, Strategies, Experiments)
+- [x] React + Vite modern quant dashboard with Recharts analytics
+- [x] AI Research Copilot strategy spec generator
+- [x] 64/64 Unit & Integration tests passing
 
 ### Project 2 — Market Regime Detection
 - Hidden Markov Models for regime detection
