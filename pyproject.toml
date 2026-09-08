@@ -1,0 +1,185 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+# =============================================================================
+# QuantLab — Python Project Descriptor
+# =============================================================================
+
+[project]
+name = "quantlab"
+version = "0.1.0"
+description = "AI Quant Research & Backtesting Platform"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "QuantLab Contributors" }]
+
+dependencies = [
+    # --- Web Framework ---
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "python-multipart>=0.0.20",
+
+    # --- Data Validation ---
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+
+    # --- Database ---
+    "sqlalchemy[asyncio]>=2.0.36",
+    "alembic>=1.14.0",
+    "asyncpg>=0.30.0",
+    "psycopg2-binary>=2.9.10",
+
+    # --- Async Task Queue ---
+    "celery[redis]>=5.4.0",
+    "redis>=5.2.0",
+    "kombu>=5.4.0",
+
+    # --- Authentication & Security ---
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "slowapi>=0.1.9",
+
+    # --- Quantitative Computing ---
+    "numpy>=2.2.0",
+    "pandas>=2.2.0",
+    "scipy>=1.15.0",
+    "scikit-learn>=1.6.0",
+    "statsmodels>=0.14.4",
+
+    # --- HTTP Client (for data providers) ---
+    "httpx>=0.28.0",
+    "tenacity>=9.0.0",
+
+    # --- Logging ---
+    "structlog>=25.1.0",
+
+    # --- Utilities ---
+    "python-dateutil>=2.9.0",
+    "pytz>=2024.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",          # for FastAPI test client
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "types-python-dateutil>=2.9.0",
+    "types-pytz>=2024.2",
+    "types-passlib>=1.7.7",
+    "ipython>=8.30.0",
+    "ipykernel>=6.29.0",
+]
+
+ml = [
+    "xgboost>=2.1.0",
+    "lightgbm>=4.5.0",
+    "matplotlib>=3.9.0",
+    "seaborn>=0.13.0",
+    "joblib>=1.4.0",
+]
+
+# =============================================================================
+# Tool Configuration
+# =============================================================================
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["quant_engine*", "backend*", "ml*"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--tb=short",
+    "--strict-markers",
+    "-v",
+]
+markers = [
+    "unit: Fast unit tests with no external dependencies",
+    "integration: Tests that require a running database or Redis",
+    "quant: Quantitative correctness tests",
+    "slow: Tests that take more than 5 seconds",
+]
+
+# ---------------------------------------------------------------------------
+# ruff (linter + formatter)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["quant_engine", "backend", "ml", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "ANN", # type annotations (subset)
+    "S",   # bandit security
+    "T20", # no print statements in production code
+]
+ignore = [
+    "ANN101",  # missing type annotation for self
+    "ANN102",  # missing type annotation for cls
+    "ANN401",  # Any is sometimes necessary
+    "S101",    # assert is fine in tests
+    "T201",    # print allowed in scripts/
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN", "S", "T20"]
+"scripts/*" = ["T201", "ANN"]
+"notebooks/*" = ["ANN", "T201", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["quant_engine", "backend", "ml"]
+
+# ---------------------------------------------------------------------------
+# mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "kombu.*", "passlib.*", "jose.*"]
+ignore_missing_imports = true
+
+# ---------------------------------------------------------------------------
+# coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["quant_engine", "backend", "ml"]
+omit = ["tests/*", "scripts/*", "notebooks/*", "migrations/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]

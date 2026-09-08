@@ -1,0 +1,127 @@
+# =============================================================================
+# QuantLab — Docker Compose (Development)
+# =============================================================================
+# Usage:
+#   docker compose up -d              Start all services
+#   docker compose up -d postgres redis  Start infrastructure only
+#   docker compose ps                  Check service health
+#   docker compose logs -f postgres    Tail logs
+#   docker compose down -v            Destroy services + volumes
+# =============================================================================
+
+version: "3.9"
+
+networks:
+  quantlab-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: quantlab-postgres
+    restart: unless-stopped
+    networks:
+      - quantlab-net
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-quantlab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantlab_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-quantlab}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-quantlab} -d ${POSTGRES_DB:-quantlab}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # Redis 7
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: quantlab-redis
+    restart: unless-stopped
+    networks:
+      - quantlab-net
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # FastAPI Backend (added in Phase 13)
+  # ---------------------------------------------------------------------------
+  # backend:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/backend/Dockerfile
+  #   container_name: quantlab-backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - quantlab-net
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+  #     REDIS_URL: redis://redis:6379/0
+  #   env_file: .env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Celery Worker (added in Phase 14)
+  # ---------------------------------------------------------------------------
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/worker/Dockerfile
+  #   container_name: quantlab-worker
+  #   restart: unless-stopped
+  #   networks:
+  #     - quantlab-net
+  #   env_file: .env
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # React Frontend (added in Phase 16)
+  # ---------------------------------------------------------------------------
+  # frontend:
+  #   build:
+  #     context: frontend
+  #     dockerfile: ../docker/frontend/Dockerfile
+  #   container_name: quantlab-frontend
+  #   restart: unless-stopped
+  #   networks:
+  #     - quantlab-net
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - backend
